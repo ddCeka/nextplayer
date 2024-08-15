@@ -239,38 +239,40 @@ class PlayerActivity : AppCompatActivity() {
             pipButton.visibility = View.GONE
         }
 
-        seekBar.addListener(object : TimeBar.OnScrubListener {
-            override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                if (player.isPlaying) {
-                    isPlayingOnScrubStart = true
-                    player.pause()
+        seekBar.addListener(
+            object : TimeBar.OnScrubListener {
+                override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                    if (player.isPlaying) {
+                        isPlayingOnScrubStart = true
+                        player.pause()
+                    }
+                    isFrameRendered = true
+                    scrubStartPosition = player.currentPosition
+                    previousScrubPosition = player.currentPosition
+                    scrub(position)
+                    showPlayerInfo(
+                        info = Utils.formatDurationMillis(position),
+                        subInfo = "[${Utils.formatDurationMillisSign(position - scrubStartPosition)}]",
+                    )
                 }
-                isFrameRendered = true
-                scrubStartPosition = player.currentPosition
-                previousScrubPosition = player.currentPosition
-                scrub(position)
-                showPlayerInfo(
-                    info = Utils.formatDurationMillis(position),
-                    subInfo = "[${Utils.formatDurationMillisSign(position - scrubStartPosition)}]",
-                )
-            }
 
-            override fun onScrubMove(timeBar: TimeBar, position: Long) {
-                scrub(position)
-                showPlayerInfo(
-                    info = Utils.formatDurationMillis(position),
-                    subInfo = "[${Utils.formatDurationMillisSign(position - scrubStartPosition)}]",
-                )
-            }
-
-            override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                hidePlayerInfo(0L)
-                scrubStartPosition = -1L
-                if (isPlayingOnScrubStart) {
-                    player.play()
+                override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                    scrub(position)
+                    showPlayerInfo(
+                        info = Utils.formatDurationMillis(position),
+                        subInfo = "[${Utils.formatDurationMillisSign(position - scrubStartPosition)}]",
+                    )
                 }
-            }
-        })
+
+                override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                    hidePlayerInfo(0L)
+                    scrubStartPosition = -1L
+                    if (isPlayingOnScrubStart) {
+                        player.play()
+                    }
+                }
+            },
+        )
 
         volumeManager = VolumeManager(audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager)
         brightnessManager = BrightnessManager(activity = this)
@@ -293,7 +295,7 @@ class PlayerActivity : AppCompatActivity() {
         setOrientation()
         initPlaylist()
         initializePlayerView()
-        playVideo(playlistManager.getCurrent() ?: intent.data!!)
+        playVideo(uri = playlistManager.getCurrent() ?: intent.data!!)
         super.onStart()
     }
 
@@ -605,6 +607,9 @@ class PlayerActivity : AppCompatActivity() {
         override fun onVideoSizeChanged(videoSize: VideoSize) {
             currentVideoSize = videoSize
             applyVideoZoom(videoZoom = playerPreferences.playerVideoZoom, showInfo = false)
+            exoContentFrameLayout.scaleX = viewModel.currentVideoScale
+            exoContentFrameLayout.scaleY = viewModel.currentVideoScale
+            exoContentFrameLayout.requestLayout()
 
             if (currentOrientation != null) return
 
@@ -662,12 +667,6 @@ class PlayerActivity : AppCompatActivity() {
 
                 Player.STATE_BUFFERING -> {
                     Timber.d("Player state: BUFFERING")
-                    if (playlistManager.hasNext()) {
-                        nextButton.imageAlpha = 255
-                    } else {
-                        nextButton.imageAlpha = 75
-                        nextButton.isEnabled = false
-                    }
                 }
 
                 Player.STATE_IDLE -> {
@@ -949,6 +948,7 @@ class PlayerActivity : AppCompatActivity() {
                 subtitleTrackIndex = player.getCurrentTrackIndex(C.TRACK_TYPE_TEXT),
                 playbackSpeed = player.playbackParameters.speed,
                 skipSilence = player.skipSilenceEnabled,
+                videoScale = exoContentFrameLayout.scaleX,
             )
         }
         isFirstFrameRendered = false
@@ -959,7 +959,7 @@ class PlayerActivity : AppCompatActivity() {
         .setUri(uri)
         .build()
 
-    private fun createExternalSubtitleStreams(subtitles: List<Subtitle>): List<MediaItem.SubtitleConfiguration> {
+    private suspend fun createExternalSubtitleStreams(subtitles: List<Subtitle>): List<MediaItem.SubtitleConfiguration> {
         return subtitles.map {
             val charset = if (with(playerPreferences.subtitleTextEncoding) { isNotEmpty() && Charset.isSupported(this) }) {
                 Charset.forName(playerPreferences.subtitleTextEncoding)
