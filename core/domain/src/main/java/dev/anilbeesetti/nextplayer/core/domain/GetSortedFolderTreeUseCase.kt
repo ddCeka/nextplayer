@@ -1,6 +1,5 @@
 package dev.anilbeesetti.nextplayer.core.domain
 
-import android.os.Environment
 import dev.anilbeesetti.nextplayer.core.common.Dispatcher
 import dev.anilbeesetti.nextplayer.core.common.NextDispatchers
 import dev.anilbeesetti.nextplayer.core.data.repository.MediaRepository
@@ -19,26 +18,33 @@ class GetSortedFolderTreeUseCase @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     @Dispatcher(NextDispatchers.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) {
-    operator fun invoke(folderPath: String? = null): Flow<Folder?> {
-        return combine(
-            mediaRepository.getFoldersFlow(),
-            preferencesRepository.applicationPreferences,
-        ) { folders, preferences ->
-            val folder = folders.find {
-                it.path == (folderPath ?: Environment.getExternalStorageDirectory().path)
-            } ?: return@combine null
+    operator fun invoke(folderPath: String? = null): Flow<Folder?> = combine(
+        mediaRepository.getFoldersFlow(),
+        preferencesRepository.applicationPreferences,
+    ) { folders, preferences ->
+        val currentFolder = folderPath?.let {
+            folders.find { it.path == folderPath } ?: return@combine null
+        } ?: Folder.rootFolder
 
-            val nestedFolders = folders.getFoldersFor(path = folder.path, preferences = preferences)
-            val sort = Sort(by = preferences.sortBy, order = preferences.sortOrder)
+        val sort = Sort(by = preferences.sortBy, order = preferences.sortOrder)
 
-            return@combine Folder(
-                name = folder.name,
-                path = folder.path,
-                dateModified = folder.dateModified,
+        currentFolder.copy(
+            folderList = folders.getFoldersFor(path = currentFolder.path, preferences = preferences),
+        ).let { folder ->
+            if (folderPath == null) folder.getInitialFolderWithContent() else folder
+        }.let { folder ->
+            folder.copy(
                 mediaList = folder.mediaList.sortedWith(sort.videoComparator()),
-                folderList = nestedFolders.sortedWith(sort.folderComparator()),
+                folderList = folder.folderList.sortedWith(sort.folderComparator()),
             )
-        }.flowOn(defaultDispatcher)
+        }
+    }.flowOn(defaultDispatcher)
+
+    private fun Folder.getInitialFolderWithContent(): Folder {
+        return when {
+            mediaList.isEmpty() && folderList.size == 1 -> folderList.first().getInitialFolderWithContent()
+            else -> this
+        }
     }
 
     private fun List<Folder>.getFoldersFor(

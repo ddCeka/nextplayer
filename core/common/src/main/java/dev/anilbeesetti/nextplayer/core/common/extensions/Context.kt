@@ -245,6 +245,7 @@ suspend fun Context.convertToUTF8(uri: Uri, charset: Charset? = null): Uri = wit
                     convertNetworkUriToUTF8(url = url, sourceCharset = detectedCharset)
                 }
             }
+
             else -> {
                 val detectedCharset = charset ?: detectCharset(uri = uri, context = this@convertToUTF8)
                 if (detectedCharset == StandardCharsets.UTF_8) {
@@ -396,4 +397,12 @@ suspend fun ContentResolver.deleteMedia(
         e.printStackTrace()
         false
     }
+}
+
+fun Context.getStorageVolumes() = try {
+    getExternalFilesDirs(null)?.mapNotNull {
+        File(it.path.substringBefore("/Android")).takeIf { file -> file.exists() }
+    } ?: listOf(Environment.getExternalStorageDirectory())
+} catch (e: Exception) {
+    listOf(Environment.getExternalStorageDirectory())
 }

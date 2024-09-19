@@ -67,7 +67,7 @@ fun QuickSettingsDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                DialogSectionTitle(text = "Media view mode")
+                DialogSectionTitle(text = stringResource(R.string.media_view_mode))
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -138,6 +138,11 @@ fun QuickSettingsDialog(
                         label = stringResource(id = R.string.path),
                         selected = preferences.showPathField,
                         onClick = { preferences = preferences.copy(showPathField = !preferences.showPathField) },
+                    )
+                    FieldChip(
+                        label = stringResource(id = R.string.played_progress),
+                        selected = preferences.showPlayedProgress,
+                        onClick = { preferences = preferences.copy(showPlayedProgress = !preferences.showPlayedProgress) },
                     )
                     FieldChip(
                         label = stringResource(id = R.string.resolution),

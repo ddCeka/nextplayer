@@ -203,4 +203,6 @@
     <string name="folder">Folder</string>
     <string name="folders">Folders</string>
     <string name="tree">Tree</string>
+    <string name="played_progress">Played progress</string>
+    <string name="media_view_mode">Media view mode</string>
 </resources>

@@ -201,4 +201,6 @@
     <string name="folder">Тека</string>
     <string name="folders">Теки</string>
     <string name="tree">Дерево</string>
+    <string name="played_progress">Прогрес відтворюваного</string>
+    <string name="media_view_mode">Режим перегляду медіафайлів</string>
 </resources>
