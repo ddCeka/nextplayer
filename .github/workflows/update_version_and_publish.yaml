@@ -12,7 +12,7 @@ on:
       release_type:
         description: "Type of release (release or preview)"
         required: true
-        default: "preview"
+        default: "release"
         type: choice
         options:
           - release
