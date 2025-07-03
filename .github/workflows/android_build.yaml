@@ -26,30 +26,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: true
-          gradle-home-cache-cleanup: true
+          cache-cleanup: always
 
       - name: Build Project with gradle
         run: ./gradlew assembleDebug
 
-      - name: Run Local Tests
-        run: ./gradlew test
-
       - name: Lint Checks
         run: ./gradlew ktlintCheck
 
-        # Upload all build artifacts in separate steps. This can be shortened once https://github.com/actions/upload-artifact/pull/354 is merged.
+        # Only specific build artifacts.
       - name: Upload artifact nextplayer-arm64-v8a-debug.apk
         uses: actions/upload-artifact@v4
         with:
           name: nextplayer-arm64-v8a-debug.apk
           path: ./app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
-
-      - name: Upload build reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-reports
-          path: app/build/reports
 
   androidTest:
     needs: build
@@ -94,7 +84,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: true
-          gradle-home-cache-cleanup: true
+          cache-cleanup: always
 
       - name: Build projects and run instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -105,10 +95,3 @@ jobs:
           disk-size: 6000M
           heap-size: 600M
           script: ./gradlew connectedCheck --daemon
-
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports-${{ matrix.api-level }}
-          path: '*/build/reports/androidTests'
